@@ -1,0 +1,14 @@
+xterm 1000
+
+        7   bell
+[       91  escape sequence
+M       77  mouse event
+        32  click
+!       33  32 + 1
+!       33  32 + 1
+        7   bell
+[       91  escape sequence
+M       77  mouse event
+#       35  release
+!       33  32 + 1
+!       33  32 + 1

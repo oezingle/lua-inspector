@@ -1,0 +1,21 @@
+xterm 1000 + 1015
+
+        7   bell
+[       91  escape sequence
+3       51  click
+2       50  click
+;       59  colon
+1       49  x
+;       59  colon
+1       49  y
+M       77  mouse
+
+        7   bell
+[       91  escape sequence
+3       51  release
+5       50  release
+;       59  colon
+1       49  x
+;       59  colon
+1       49  y
+M       77  mouse

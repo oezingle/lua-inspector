@@ -1,0 +1,21 @@
+xterm 1000 + 1006
+
+        7   bell
+[       91  sequence
+<       60  complex mouse event
+0       48  zero
+;       59  colon
+1       49  x
+;       59  colon
+1       49  y
+M       77  click
+
+        7   bell
+[       91  sequence
+<       60  complex mouse event
+0       48  zero
+;       59  colon
+1       49  x
+;       59  colon
+1       49  y
+m       109 release
