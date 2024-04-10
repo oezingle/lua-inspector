@@ -1,28 +1,26 @@
----@alias LuaInspect.Stringify.Registrar fun (x: integer, y: integer, length: integer, event: { type: "key", key: string } | { type: "expand" })
+---@param obj any
+---@param expand_level 2 | 1 | 0
+---@return string
+local function stringify_safe(obj, expand_level) 
+    return ""
+end
 
 ---@param obj any
 ---@param expand_level 2 | 1 | 0
----@param register_click LuaInspect.Stringify.Registrar ?
-local function stringify(obj, expand_level, register_click)
+local function stringify(obj, expand_level)
     local t = type(obj)
-
-    ---@type LuaInspect.Stringify.Registrar
-    local register_click = register_click or function(x, y, length, event)
-
-    end
 
     if t == "string" or t == "number" or t == "boolean" then
         return string.format("%q", obj)
-    elseif t == "table" then
+    elseif t == "table" or t == "userdata" then
         if expand_level >= 1 then
             local kvpairs = {}
 
-            for k, v in pairs(obj) do
-                local k_str = string.format("[%q]", k)
-                -- TODO needs to pass in a modified register_click here - clicks need to be offset by v_str's position.
-                local v_str = stringify(v, expand_level - 1, register_click)
+            local iter = getmetatable(obj).__pairs or getmetatable(obj).__ipairs or pairs
 
-                -- TODO register click events
+            for k, v in iter(obj) do
+                local k_str = string.format("[%q]", k)
+                local v_str = stringify_safe(v, expand_level - 1)
 
                 table.insert(kvpairs, k_str .. " = " .. v_str)
             end
@@ -33,8 +31,6 @@ local function stringify(obj, expand_level, register_click)
                 return string.format("{ %s }", table.concat(kvpairs, ", "))
             end
         else
-            register_click(1, 1, 5, { type = "expand" })
-
             return "{...}"
         end
     elseif t == "function" then
@@ -73,4 +69,17 @@ local function stringify(obj, expand_level, register_click)
     return t
 end
 
-return stringify
+---@param obj any
+---@param expand_level 2 | 1 | 0
+---@return string
+stringify_safe = function(obj, expand_level)
+    local _, str = xpcall(function()
+        return stringify(obj, expand_level)
+    end, function()
+        return "<Unable to stringify (error)>"
+    end)
+
+    return str
+end
+
+return stringify_safe

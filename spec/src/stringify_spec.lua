@@ -56,7 +56,9 @@ describe("stringify", function ()
 
             assert.equal("function", str)
         end)
-
-        -- TODO expand_level 2 tests
+        
+        -- TODO test tables that fail to __index / userdata
     end)
+    
+    -- TODO expand_level 2 tests
 end)

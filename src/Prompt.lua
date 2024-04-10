@@ -1,9 +1,9 @@
-local class        = require("lib.30log")
-local string_split = require("src.polyfill.string_split")
-local list_reduce  = require("src.polyfill.list_reduce")
-local parse_key    = require("src.parse_key")
-local icons        = require("src.icons")
-local stringify    = require("src.stringify")
+local class          = require("lib.30log")
+local string_split   = require("src.polyfill.string_split")
+local list_reduce    = require("src.polyfill.list_reduce")
+local parse_key      = require("src.parse_key")
+local icons          = require("src.icons")
+local stringify      = require("src.stringify")
 
 -- TODO probably a good idea to allow userdata with pairs/ipairs to be inspected
 
@@ -15,7 +15,9 @@ local stringify    = require("src.stringify")
 ---@field object any
 ---
 ---@operator call:LuaInspect.Prompt
-local Prompt       = class("Prompt")
+local Prompt         = class("Prompt")
+
+local PATH_METATABLE = {} -- don't have to worry about matching strings.
 
 function Prompt:init(obj)
     self.expand = false
@@ -25,6 +27,8 @@ function Prompt:init(obj)
         local index = 1
 
         repeat
+            -- TODO level 4 only works for loca locals scoped by caller.
+            -- TODO Maybe try up to level 16?
             local name, value = debug.getlocal(4, index)
 
             if value == obj then
@@ -44,7 +48,11 @@ end
 
 function Prompt:recurse_path()
     return list_reduce(self.path, function(object, key)
-        return object[key]
+        if key == PATH_METATABLE then
+            return getmetatable(object)
+        else
+            return object[key]
+        end
     end, self.object)
 end
 
@@ -54,7 +62,16 @@ function Prompt:print()
     self:clear()
 
     -- Top bar
-    print(string.format("[%s] %s", self.identifier, table.concat(self.path, ".")))
+    local path = {}
+    for _, path_elem in ipairs(self.path) do
+        if path_elem == PATH_METATABLE then
+            table.insert(path, "__mt")
+        else
+            table.insert(path, path_elem)
+        end
+    end
+
+    print(string.format("[%s] %s", self.identifier, table.concat(path, ".")))
 
     local obj = self:recurse_path()
     local obj_str = stringify(obj, self.expand and 2 or 1)
@@ -89,6 +106,11 @@ end
 
 function Prompt:command_exit()
     self.stopped = true
+end
+
+--- Add metatable to the path
+function Prompt:command_mt()
+    table.insert(self.path, PATH_METATABLE)
 end
 
 --- Move down the path given the key to a child
@@ -139,6 +161,7 @@ function Prompt:command_help(subcommand)
             "expand\ttoggle expanded (multiline) view",
             "up\t\tmove explore path up",
             "down <key>\tmove explore path down by key",
+            "mt\t\tView this table's metatable",
             "help [cmd]\tthis page and help for commands"
         }, "\n\t- "))
     else
@@ -161,8 +184,10 @@ function Prompt:command_help(subcommand)
                 "\taddress - hexidecimal address of a function, table, thread, or userdata key, preceded by 0x",
                 "\tstring - any value not recognized by the previous matchers. Quoted values will always be matched as strings, double quoted values will be matched as strings surrounded by quotes."
             }, "\n"))
+        elseif subcommand == "mt" then
+            self:warn_user("mt\n\nMove the explore path to this object's metatable")
         elseif subcommand == "help" then
-            self:warn_user("Show this page")
+            self:warn_user("help\n\nShow this page")
         else
             self:warn_user(string.format("Unknown command \"%s\"", subcommand))
         end
@@ -184,6 +209,8 @@ function Prompt:command(command)
         self:command_expand()
     elseif args[1] == "down" then
         self:command_down(args[2])
+    elseif args[1] == "mt" then
+        self:command_mt()
     elseif args[1] == "up" then
         self:command_up()
     elseif args[1] == "help" then
